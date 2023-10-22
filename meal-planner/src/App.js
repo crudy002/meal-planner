@@ -1,14 +1,20 @@
 // src/App.js
-import React, { useState } from 'react';
+import React, { useState, useEffect} from 'react';
 import './App.css'; // You can add your own styles in App.css
 
 function App() {
-  // State for meal plans (example data for now)
-  const [mealPlans, setMealPlans] = useState([
-    { id: 1, day: 'Monday', meals: ['Breakfast', 'Lunch', 'Dinner'] }
-  ]);
+  // State for meal plans (starts out empty)
+  const [mealPlans, setMealPlans] = useState([]);
 
-  // Function to add a new meal plan
+  useEffect(() => {
+    //fetch('http://localhost:5000/meals')
+    fetch('https://5000-crudy002-mealplanner-cxws9s6yx88.ws-us105.gitpod.io/meals')
+      .then((response) => response.json())
+      .then((data) => setMealPlans(data))
+      .catch((error) => console.error('Error fetching meal plans:', error));
+  }, []);
+
+
   const addMealPlan = () => {
     const newDay = prompt('Enter a new day:');
     if (newDay) {
