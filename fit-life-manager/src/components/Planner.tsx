@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { type WeeklyPlan, type WeekDays } from '../types/planner';
 import { DayCard } from './DayCard';
 
@@ -14,11 +14,18 @@ const initialPlan: WeeklyPlan = {
 
 export const Planner = () => {
     // state storing and updating the week and each days meals + workouts
-    const [plan, setPlan] = useState<WeeklyPlan>(initialPlan);
+    const [plan, setPlan] = useState<WeeklyPlan>(() => {
+        const stored = localStorage.getItem("weeklyPlan");
+        return stored ? JSON.parse(stored) : initialPlan;
+      }); // either load from local storage or reinitialize
     // states for user input: what day, meal name, workout name
     const [selectedDay, setSelectedDay] = useState<keyof WeeklyPlan>('Mon');
     const [mealInput, setMealInput] = useState('');
     const [workoutInput, setWorkoutInput] = useState('');
+
+    useEffect(() => {
+        localStorage.setItem("weeklyPlan", JSON.stringify(plan));
+      }, [plan]);
 
     // Function to add a meal, select the day and input name
     const addMeal = () => {
