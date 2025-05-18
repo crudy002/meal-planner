@@ -8,7 +8,7 @@
 tasks:
   - name: Setup & Dev
     init: cd fit-life-manager && npm install
-    command: cd fit-life-manager && npm run dev
+    command: npm run dev
     openMode: tab-after
 
 ports:
