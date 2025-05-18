@@ -45,16 +45,30 @@ export const Planner = () => {
     };
 
     return (
-        <div className="flex p-6">
-            {/* Week grid with daycards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-grow">
-                {Object.entries(plan).map(([day, data]) => (
-                    <DayCard key={day} day={day} data={data} />
-                ))}
-            </div>
+        <div className="flex min-h-screen bg-gray-100 w-full">
+            {/* Sidebar */}
+            <aside className="w-1/5 bg-white p-4 border-r">
+                <h1 className="text-xl font-bold mb-6">FitLife</h1>
+                <nav className="space-y-2">
+                    <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Dashboard</button>
+                    <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Meals</button>
+                    <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Workouts</button>
+                    <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Progress</button>
+                </nav>
+            </aside>
 
-            {/* Form input */}
-            <div className="ml-8 w-64">
+            {/* Main Content */}
+            <main className="w-3/5 p-6 overflow-auto">
+                <h2 className="text-2xl font-bold mb-4">Weekly Planner</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+                    {Object.entries(plan).map(([day, data]) => (
+                        <DayCard key={day} day={day} data={data} />
+                    ))}
+                </div>
+            </main>
+
+            {/* Right Sidebar */}
+            <aside className="w-1/5 bg-white p-4 border-l">
                 <h2 className="font-bold mb-4">Quick Actions</h2>
 
                 <label className="block mb-2 font-medium">Select Day:</label>
@@ -97,7 +111,8 @@ export const Planner = () => {
                 >
                     Add Workout
                 </button>
-            </div>
+            </aside>
         </div>
+
     );
 };
