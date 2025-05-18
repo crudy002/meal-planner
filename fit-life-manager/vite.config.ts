@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     host: true, // allow external access
     strictPort: true,
-    port: 5174,
+    port: 5173,
     allowedHosts: true // <-- Add this line
   }
 })
