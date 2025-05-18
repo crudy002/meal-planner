@@ -1,0 +1,16 @@
+# .gitpod.yml
+
+# Add if eventually need a custom configuraton of the env
+# image:
+#   file: .gitpod.Dockerfile 
+
+# Start frontend web app using vite and open a new terminal for it
+tasks:
+  - name: Setup & Dev
+    init: cd fit-life-manager && npm install
+    command: cd fit-life-manager && npm run dev
+    openMode: tab-after
+
+ports:
+  - port: 5173
+    onOpen: open-preview

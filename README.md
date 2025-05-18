@@ -33,6 +33,32 @@ MealPlanner is a web application that simplifies meal planning, grocery shopping
 - **Community and Collaboration:**
   Join a community of meal planners, share recipes, and discover new ones.
 
+## Progression toward version 1.0
+
+## Plans/ideas for incorperation 
+
+- CI/CD Pipleline for:
+Building on certain commits
+Pushing to firebase or supabase
+
+- Drag and Drop (Optional Advanced)
+Use drag-and-drop to rearrange plans or copy between days.
+
+- Edit Existing Items
+Instead of just delete → let users click on a meal/workout to edit it in place.
+
+- Modal or Sidebar for Input
+Instead of showing the input form always, show it in a popup/modal. Try @headlessui/react or a custom Tailwind modal.
+
+- Mobile Responsiveness
+The layout works on desktop, but it could stack better on small screens. Tailwind's responsive classes make this smooth.
+
+- Export/Import Data
+Allow the user to download their weekly plan as JSON or upload one to restore it.
+
+- Connect to Backend (Optional)
+Later you can connect to Firebase or Supabase to make this multi-device ready.
+
 ## Get Started
 
 Visit [MealPlanner on GitHub](https://github.com/your-username/MealPlanner) to get started.
