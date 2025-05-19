@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { type WeeklyPlan, type WeekDays } from '../types/planner';
-import { DayCard } from './DayCard';
+import { DayCard } from '../components/DayCard';
 
 const initialPlan: WeeklyPlan = {
     Mon: { meals: [], workouts: [] },
@@ -12,7 +12,8 @@ const initialPlan: WeeklyPlan = {
     Sun: { meals: [], workouts: [] },
 };
 
-export const Planner = () => {
+
+const PlannerPage = () => {
     // state storing and updating the week and each days meals + workouts
     const [plan, setPlan] = useState<WeeklyPlan>(() => {
         const stored = localStorage.getItem("weeklyPlan");
@@ -75,7 +76,7 @@ export const Planner = () => {
 
     return (
         <div className="flex min-h-screen bg-gray-100 w-full">
-            {/* Sidebar */}
+            {/* Sidebar
             <aside className="w-1/5 bg-white p-4 border-r">
                 <h1 className="text-xl font-bold mb-6">FitLife</h1>
                 <nav className="space-y-2">
@@ -84,10 +85,10 @@ export const Planner = () => {
                     <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Workouts</button>
                     <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Progress</button>
                 </nav>
-            </aside>
+            </aside> */}
 
             {/* Main Content */}
-            <main className="w-3/5 p-6 overflow-auto">
+            <main className="w-4/5 p-6 overflow-auto">
                 <h2 className="text-2xl font-bold mb-4">Weekly Planner</h2>
                 <div className="space-y-2">
                     {/* Column Headers */}
@@ -160,3 +161,5 @@ export const Planner = () => {
 
     );
 };
+
+export default PlannerPage;

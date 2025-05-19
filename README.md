@@ -16,6 +16,8 @@ MealPlanner is a web application that simplifies meal planning, grocery shopping
 - **Nutritional Insights:**
   Get nutritional information for each recipe.
 
+- **Connect Instagram/Socials for Recipes**
+
 ## How it Works
 
 1. **Plan:** Schedule your meals for the week with a simple drag-and-drop interface.
