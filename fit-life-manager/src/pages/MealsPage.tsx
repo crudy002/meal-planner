@@ -90,11 +90,59 @@ export const MealsPage = () => {
     });
   };
 
-  const deleteMeal = async (id: string) => {
-    const { error } = await supabase.from('meals').delete().eq('id', id);
-    if (error) console.error('Delete failed', error.message);
-    else await fetchMeals(); // Sync after delete
+  const deleteMeal = async (mealId: string) => {
+    const confirmed = window.confirm("Are you sure you want to delete this meal? It will also be removed from your planner.");
+    if (!confirmed) return;
+  
+    // Step 1: Delete meal from meals table
+    const { error: mealError } = await supabase
+      .from('meals')
+      .delete()
+      .eq('id', mealId);
+  
+    if (mealError) {
+      console.error("Error deleting meal:", mealError.message);
+      return;
+    }
+  
+    // Step 2: Remove meal from any day in weekly_plans
+    const { data: daysData, error: daysError } = await supabase
+      .from('weekly_plans')
+      .select('day, meals, workouts');
+  
+    if (daysError) {
+      console.error("Error fetching weekly plan:", daysError.message);
+      return;
+    }
+  
+    const updates = daysData
+      .map(day => {
+        const filteredMeals = day.meals?.filter((id: string) => id !== mealId);
+        if (filteredMeals.length !== day.meals.length) {
+          return {
+            day: day.day,
+            meals: filteredMeals,
+            workouts: day.workouts,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  
+    if (updates.length > 0) {
+      const { error: updateError } = await supabase
+        .from('weekly_plans')
+        .upsert(updates, { onConflict: 'day' });
+  
+      if (updateError) {
+        console.error("Error cleaning planner meals:", updateError.message);
+      }
+    }
+  
+    // Refresh your meals list
+    fetchMeals();
   };
+  
 
   return (
     <div className="max-w-4xl mx-auto p-4">

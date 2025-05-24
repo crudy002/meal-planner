@@ -160,15 +160,27 @@ const PlannerPage = () => {
     }
   };
 
-  // Remove an individual meal or workout from a day
-  const deleteItem = (day: keyof WeeklyPlan, type: 'meals' | 'workouts', index: number) => {
-    setPlan((prev) => ({
-      ...prev,
-      [day]: {
+  const deleteItem = async (
+    day: keyof WeeklyPlan,
+    type: 'meals' | 'workouts',
+    index: number
+  ) => {
+    setPlan((prev) => {
+      const updatedItems = prev[day][type].filter((_, i) => i !== index);
+      const updatedDay = {
         ...prev[day],
-        [type]: prev[day][type].filter((_, i) => i !== index),
-      },
-    }));
+        [type]: updatedItems,
+      };
+      const updatedPlan = {
+        ...prev,
+        [day]: updatedDay,
+      };
+  
+      // ⬇ Update Supabase with new values
+      updateDayInDatabase(day, updatedPlan);
+  
+      return updatedPlan;
+    });
   };
 
   return (
