@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { type WeeklyPlan, type WeekDays } from '../types/planner';
+import { type WeeklyPlan, type WeekDays, type Meal} from '../types/planner';
 import { DayCard } from '../components/DayCard';
 
 import { supabase } from "../lib/supabase";
 
-type Meal = {
-  id: string;
-  name: string;
-};
+// type Meal = {
+//   id: string;
+//   name: string;
+// };
 
 
 
@@ -33,13 +33,22 @@ const PlannerPage = () => {
   const [selectedDay, setSelectedDay] = useState<keyof WeeklyPlan>('Mon');
   const [mealInput, setMealInput] = useState('');
   const [workoutInput, setWorkoutInput] = useState('');
+  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
 
   const [meals, setMeals] = useState<Meal[]>([]);
+
+  const handleMealSelect = (mealName: string) => {
+    const meal = meals.find(m => m.name === mealName);
+    if (meal) {
+      setSelectedMeal(meal);
+    }
+  };  
 
 
   useEffect(() => {
     const fetchMeals = async () => {
-      const { data, error } = await supabase.from('meals').select('id, name');
+      const { data, error } = await supabase.from('meals').select('id, name, ingredients, source_link, recipe_notes');
+
       if (error) {
         console.error("Error fetching meals:", error.message);
       } else {
@@ -102,17 +111,6 @@ const PlannerPage = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-100 w-full">
-      {/* Sidebar
-            <aside className="w-1/5 bg-white p-4 border-r">
-                <h1 className="text-xl font-bold mb-6">FitLife</h1>
-                <nav className="space-y-2">
-                    <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Dashboard</button>
-                    <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Meals</button>
-                    <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Workouts</button>
-                    <button className="block w-full text-left text-gray-800 hover:bg-gray-200 px-2 py-1 rounded">Progress</button>
-                </nav>
-            </aside> */}
-
       {/* Main Content */}
       <main className="w-4/5 p-6 overflow-auto">
         <h2 className="text-2xl font-bold mb-4">Weekly Planner</h2>
@@ -132,9 +130,43 @@ const PlannerPage = () => {
                 day={day as WeekDays}
                 data={data}
                 onDelete={deleteItem}
+                onSelectMeal={handleMealSelect}
               />
+
             ))}
           </div>
+          {selectedMeal && (
+            <div className="flex justify-center mt-8">
+
+            <div className="bg-white p-4 shadow rounded mt-6 max-w-md">
+              <h3 className="text-xl font-bold">{selectedMeal.name}</h3>
+              <p className="mt-2">
+                <strong>Ingredients:</strong> {selectedMeal.ingredients?.join(', ') || 'N/A'}
+              </p>
+              {selectedMeal.source_link && (
+                <p className="mt-2">
+                  <a
+                    href={selectedMeal.source_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                  >
+                    View Recipe
+                  </a>
+                </p>
+              )}
+              {selectedMeal.recipe_notes && <p className="mt-2">{selectedMeal.recipe_notes}</p>}
+              <button
+                onClick={() => setSelectedMeal(null)}
+                className="mt-4 text-sm text-gray-500 underline"
+              >
+                Close
+              </button>
+            </div>
+            </div>
+          )}
+          
+
         </div>
       </main>
 

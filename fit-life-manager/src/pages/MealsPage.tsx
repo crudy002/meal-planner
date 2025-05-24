@@ -1,13 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from '../lib/supabase';
-
-type Meal = {
-  id: string;
-  name: string;
-  ingredients: string[];
-  source_link?: string;
-  recipe_notes?: string;
-};
+import {type Meal} from '../types/planner'
 
 export const MealsPage = () => {
   const [meals, setMeals] = useState<Meal[]>(() => {
