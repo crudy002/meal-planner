@@ -1,17 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { type WeeklyPlan, type WeekDays, type Meal} from '../types/planner';
+import { type WeeklyPlan, type WeekDays, type Meal } from '../types/planner';
 import { DayCard } from '../components/DayCard';
-
 import { supabase } from "../lib/supabase";
 
-// type Meal = {
-//   id: string;
-//   name: string;
-// };
-
-
-
-
+// Initial empty structure for the weekly plan
 const initialPlan: WeeklyPlan = {
   Mon: { meals: [], workouts: [] },
   Tue: { meals: [], workouts: [] },
@@ -22,32 +14,41 @@ const initialPlan: WeeklyPlan = {
   Sun: { meals: [], workouts: [] },
 };
 
-
 const PlannerPage = () => {
-  // state storing and updating the week and each days meals + workouts
+  // Weekly plan loaded from localStorage or fallback to empty template
   const [plan, setPlan] = useState<WeeklyPlan>(() => {
     const stored = localStorage.getItem("weeklyPlan");
     return stored ? JSON.parse(stored) : initialPlan;
-  }); // either load from local storage or reinitialize
-  // states for user input: what day, meal name, workout name
-  const [selectedDay, setSelectedDay] = useState<keyof WeeklyPlan>('Mon');
-  const [mealInput, setMealInput] = useState('');
-  const [workoutInput, setWorkoutInput] = useState('');
-  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
+  });
 
+  // User-selected day for adding meals or workouts
+  const [selectedDay, setSelectedDay] = useState<keyof WeeklyPlan>('Mon');
+
+  // Form input states
+  const [mealInput, setMealInput] = useState<string>(''); // Now storing ID, not name
+
+  const [workoutInput, setWorkoutInput] = useState('');
+
+  // All available meals from the database
   const [meals, setMeals] = useState<Meal[]>([]);
 
-  const handleMealSelect = (mealName: string) => {
-    const meal = meals.find(m => m.name === mealName);
+  // The currently selected meal for showing detailed view
+  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
+
+  // Handle clicking on a meal in the DayCard to show details
+  const handleMealSelect = (mealId: string) => {
+    const meal = meals.find(m => m.id === mealId);
     if (meal) {
       setSelectedMeal(meal);
     }
-  };  
+  };
 
-
+  // Fetch all meals from Supabase when component mounts
   useEffect(() => {
     const fetchMeals = async () => {
-      const { data, error } = await supabase.from('meals').select('id, name, ingredients, source_link, recipe_notes');
+      const { data, error } = await supabase
+        .from('meals')
+        .select('id, name, ingredients, source_link, recipe_notes');
 
       if (error) {
         console.error("Error fetching meals:", error.message);
@@ -59,44 +60,107 @@ const PlannerPage = () => {
     fetchMeals();
   }, []);
 
+  // Fetch the existing weekly plan from Supabase when component mounts
   useEffect(() => {
-    localStorage.setItem("weeklyPlan", JSON.stringify(plan));
-  }, [plan]);
+    const fetchPlan = async () => {
+      const { data, error } = await supabase
+        .from('weekly_plans')
+        .select('day, meals, workouts');
 
-  // Function to add a meal, select the day and input name
-  const addMeal = () => {
-    // If the meal input is empty don't add an entry
+      if (error) {
+        console.error('Error fetching weekly plan:', error.message);
+      } else {
+        const loadedPlan = data.reduce((acc, curr) => {
+          acc[curr.day as keyof WeeklyPlan] = {
+            meals: curr.meals || [],
+            workouts: curr.workouts || [],
+          };
+          return acc;
+        }, {} as WeeklyPlan);
+
+        // Merge loaded data with default to ensure all 7 days exist
+        setPlan({ ...initialPlan, ...loadedPlan });
+      }
+    };
+
+    fetchPlan();
+  }, []);
+
+  // Add a meal to the selected day and update Supabase
+  const addMeal = async () => {
     if (!mealInput.trim()) return;
 
-    setPlan(prev => ({ // Update the "plan" state using the previous state (prev)
-      ...prev,         // Spread all previous days and their data (don't change other days)
-      [selectedDay]: { // Only update the selected day (e.g., "Mon", "Tue", etc.)
-        ...prev[selectedDay], // Keep all existing data for that day (like workouts)
-        meals: [              // Replace the "meals" array with a new one
-          ...prev[selectedDay].meals, // Include all current meals for that day
-          mealInput                   // Add the new meal input at the end
-        ]
-      }
-    }));
+    // Append meal to selected day's meal list
+    const updatedDay = {
+      ...plan[selectedDay],
+      meals: [...plan[selectedDay].meals, mealInput],
+    };
 
-    // Set the meal input back to empty
-    setMealInput('');
+    const updatedPlan = {
+      ...plan,
+      [selectedDay]: updatedDay,
+    };
+
+    setPlan(updatedPlan); // Update UI
+
+    // Persist to Supabase (insert or update)
+    const { error } = await supabase
+      .from('weekly_plans')
+      .upsert([
+        {
+          day: selectedDay,
+          meals: updatedDay.meals,
+          workouts: updatedDay.workouts,
+        },
+      ], {
+        onConflict: 'day',
+      });
+
+    if (error) {
+      console.error(`Failed to update ${selectedDay}:`, error.message);
+    }
+
+    setMealInput(''); // Clear input
   };
 
-  // Function to add a workout, select the day and input name
+  // Add a workout to the selected day and update Supabase
   const addWorkout = () => {
     if (!workoutInput.trim()) return;
-    setPlan(prev => ({
-      ...prev,
-      [selectedDay]: {
-        ...prev[selectedDay],
-        workouts: [...prev[selectedDay].workouts, workoutInput]
-      }
-    }))
+
+    setPlan(prev => {
+      const updated = {
+        ...prev,
+        [selectedDay]: {
+          ...prev[selectedDay],
+          workouts: [...prev[selectedDay].workouts, workoutInput],
+        },
+      };
+
+      // Save updated workouts to Supabase
+      updateDayInDatabase(selectedDay, updated);
+      return updated;
+    });
+
     setWorkoutInput('');
   };
 
-  //  Function to delete a day item
+  // Helper to upsert a single day’s data to Supabase
+  const updateDayInDatabase = async (day: keyof WeeklyPlan, updatedPlan: WeeklyPlan) => {
+    const { meals, workouts } = updatedPlan[day];
+
+    const { error } = await supabase
+      .from('weekly_plans')
+      .upsert(
+        [{ day, meals, workouts }],
+        { onConflict: 'day' }
+      );
+
+    if (error) {
+      console.error(`Failed to update ${day}:`, error.message);
+    }
+  };
+
+  // Remove an individual meal or workout from a day
   const deleteItem = (day: keyof WeeklyPlan, type: 'meals' | 'workouts', index: number) => {
     setPlan((prev) => ({
       ...prev,
@@ -107,15 +171,14 @@ const PlannerPage = () => {
     }));
   };
 
-
-
   return (
     <div className="flex min-h-screen bg-gray-100 w-full">
       {/* Main Content */}
       <main className="w-4/5 p-6 overflow-auto">
         <h2 className="text-2xl font-bold mb-4">Weekly Planner</h2>
         <div className="space-y-2">
-          {/* Column Headers */}
+
+          {/* Column Headers for Days */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 px-1 text-center font-semibold text-gray-700">
             {Object.keys(plan).map((day) => (
               <div key={day}>{day}</div>
@@ -129,51 +192,54 @@ const PlannerPage = () => {
                 key={day}
                 day={day as WeekDays}
                 data={data}
+                mealsList={meals} // 👈 pass full meals array
                 onDelete={deleteItem}
                 onSelectMeal={handleMealSelect}
               />
-
             ))}
           </div>
+
+
+          {/* Meal Details Modal */}
           {selectedMeal && (
             <div className="flex justify-center mt-8">
-
-            <div className="bg-white p-4 shadow rounded mt-6 max-w-md">
-              <h3 className="text-xl font-bold">{selectedMeal.name}</h3>
-              <p className="mt-2">
-                <strong>Ingredients:</strong> {selectedMeal.ingredients?.join(', ') || 'N/A'}
-              </p>
-              {selectedMeal.source_link && (
+              <div className="bg-white p-4 shadow rounded mt-6 max-w-md">
+                <h3 className="text-xl font-bold">{selectedMeal.name}</h3>
                 <p className="mt-2">
-                  <a
-                    href={selectedMeal.source_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline"
-                  >
-                    View Recipe
-                  </a>
+                  <strong>Ingredients:</strong> {selectedMeal.ingredients?.join(', ') || 'N/A'}
                 </p>
-              )}
-              {selectedMeal.recipe_notes && <p className="mt-2">{selectedMeal.recipe_notes}</p>}
-              <button
-                onClick={() => setSelectedMeal(null)}
-                className="mt-4 text-sm text-gray-500 underline"
-              >
-                Close
-              </button>
-            </div>
+                {selectedMeal.source_link && (
+                  <p className="mt-2">
+                    <a
+                      href={selectedMeal.source_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      View Recipe
+                    </a>
+                  </p>
+                )}
+                {selectedMeal.recipe_notes && (
+                  <p className="mt-2">{selectedMeal.recipe_notes}</p>
+                )}
+                <button
+                  onClick={() => setSelectedMeal(null)}
+                  className="mt-4 text-sm text-gray-500 underline"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           )}
-          
-
         </div>
       </main>
 
-      {/* Right Sidebar */}
+      {/* Right Sidebar - Quick Actions */}
       <aside className="w-1/5 bg-white p-4 border-l">
         <h2 className="font-bold mb-4">Quick Actions</h2>
 
+        {/* Day Selector */}
         <label className="block mb-2 font-medium">Select Day:</label>
         <select
           className="w-full mb-4 p-2 border rounded"
@@ -185,6 +251,7 @@ const PlannerPage = () => {
           ))}
         </select>
 
+        {/* Meal Selector */}
         <label className="block mb-1 font-medium">Meal</label>
         <select
           value={mealInput}
@@ -193,9 +260,7 @@ const PlannerPage = () => {
         >
           <option value="">Select a meal</option>
           {meals.map(meal => (
-            <option key={meal.id} value={meal.name}>
-              {meal.name}
-            </option>
+            <option key={meal.id} value={meal.id}>{meal.name}</option>
           ))}
         </select>
         <button
@@ -205,6 +270,7 @@ const PlannerPage = () => {
           Add Meal
         </button>
 
+        {/* Workout Input */}
         <label className="block mb-1 font-medium">Workout</label>
         <input
           type="text"
@@ -221,7 +287,6 @@ const PlannerPage = () => {
         </button>
       </aside>
     </div>
-
   );
 };
 
