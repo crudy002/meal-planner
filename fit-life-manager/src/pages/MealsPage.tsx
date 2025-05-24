@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { supabase } from '../lib/supabase';
 
 type Meal = {
   id: string;
   name: string;
   ingredients: string[];
-  recipeLink?: string;
-  notes?: string;
+  source_link?: string;
+  recipe_notes?: string;
 };
 
 export const MealsPage = () => {
@@ -27,27 +28,59 @@ export const MealsPage = () => {
     localStorage.setItem("meals", JSON.stringify(meals));
   }, [meals]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveMeal = async (meal: Meal) => {
+    const { data, error } = await supabase.from('meals').insert([meal]);
 
+    if (error) {
+      console.error('Error saving meal:', error.message);
+    } else {
+      console.log('Meal saved!', data);
+    }
+  };
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+  
     const newMeal: Meal = {
       id: editingId ?? crypto.randomUUID(),
       name: form.name,
       ingredients: form.ingredients.split(",").map(s => s.trim()),
-      recipeLink: form.recipeLink,
-      notes: form.notes,
+      source_link: form.recipeLink,
+      recipe_notes: form.notes,
     };
-
+  
     if (editingId) {
-      // Edit existing
-      setMeals(prev => prev.map(m => (m.id === editingId ? newMeal : m)));
+      // Edit in Supabase
+      await updateMeal(editingId, newMeal);
     } else {
-      // Add new
-      setMeals(prev => [...prev, newMeal]);
+      // Save to Supabase
+      await saveMeal(newMeal);
     }
-
+  
+    await fetchMeals(); // Re-sync with DB
     resetForm();
   };
+
+  const fetchMeals = async () => {
+    const { data, error } = await supabase.from('meals').select('*');
+  
+    if (error) {
+      console.error('Error fetching meals:', error.message);
+    } else {
+      setMeals(data);
+    }
+  };
+  
+  useEffect(() => {
+    fetchMeals();
+  }, []);
+
+  const updateMeal = async (id: string, updates: Partial<Meal>) => {
+    const { error } = await supabase.from('meals').update(updates).eq('id', id);
+    if (error) console.error('Update failed', error.message);
+  };
+  
 
   const resetForm = () => {
     setForm({ name: "", ingredients: "", recipeLink: "", notes: "" });
@@ -59,14 +92,15 @@ export const MealsPage = () => {
     setForm({
       name: meal.name,
       ingredients: meal.ingredients.join(", "),
-      recipeLink: meal.recipeLink ?? "",
-      notes: meal.notes ?? "",
+      recipeLink: meal.source_link ?? "",
+      notes: meal.recipe_notes ?? "",
     });
   };
 
-  const deleteMeal = (id: string) => {
-    setMeals(prev => prev.filter(m => m.id !== id));
-    if (editingId === id) resetForm();
+  const deleteMeal = async (id: string) => {
+    const { error } = await supabase.from('meals').delete().eq('id', id);
+    if (error) console.error('Delete failed', error.message);
+    else await fetchMeals(); // Sync after delete
   };
 
   return (
@@ -137,9 +171,9 @@ export const MealsPage = () => {
           >
             <h4 className="font-bold text-lg">{meal.name}</h4>
             <p><strong>Ingredients:</strong> {meal.ingredients.join(", ")}</p>
-            {meal.recipeLink && (
+            {meal.source_link && (
               <a
-                href={meal.recipeLink}
+                href={meal.source_link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 underline"
@@ -147,7 +181,7 @@ export const MealsPage = () => {
                 View Recipe
               </a>
             )}
-            {meal.notes && <p>{meal.notes}</p>}
+            {meal.recipe_notes && <p>{meal.recipe_notes}</p>}
             <div className="flex gap-2 mt-2">
               <button
                 onClick={() => startEditing(meal)}

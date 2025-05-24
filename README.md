@@ -85,6 +85,13 @@ kill $(lsof -ti :5173)
 Or force kill:
 kill -9 $(lsof -ti :5173)
 
+## Stack
+
+React - frontend framework using Typscript
+Tailwind - CSS component framework
+Vite - development server
+Supabase - hosting and data persistence
+
 
 ## Contributing
 
